@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# In-App Message 재설계 · 테스트 콘솔 (프로토타입)
 
-## Getting Started
+기획서 **『인앱 마케팅 팝업(In-App Message) 재설계 — 상세기획서』** 기반의 인터랙티브 테스트 페이지입니다.
+어드민 UI를 목업(FigJam)과 최대한 비슷하게 재현하고, **입력하는 대로 모바일 팝업이 어떻게 보일지 실시간 미리보기**를 제공합니다.
 
-First, run the development server:
+## 실행 방법
 
 ```bash
+cd ~/Desktop/inapp-message-tester
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+브라우저에서 http://localhost:3000 접속.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4
+- 별도 백엔드 없이 **localStorage**로 상태를 저장하는 프론트엔드 프로토타입입니다.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 페이지 구성
 
-## Learn More
+| 경로 | 화면 | 기획서 대응 |
+|---|---|---|
+| `/` | **History(목록)** — 필터바, 국가별 행, 상태 배지, 우선순위 편집, 행 액션, 캐러셀 미리보기 | §5.1 · H-01~H-10 |
+| `/campaigns/new` | **New Campaign Setup** — 이름→대상→메시지→일정→테스트 + **우측 실시간 모바일 미리보기** + Review 모달 | §5.2 · C-01~C-16 |
+| `/test-sends` | **Test Sends log** — 24h 자동만료, 즉시 삭제 | §5.3 · T-01~T-04 |
 
-To learn more about Next.js, take a look at the following resources:
+## 재현한 핵심 기능
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **실시간 모바일 미리보기** — 배너 이미지 업로드/이름/탭 동작을 입력하면 세로형 팝업(스토리 진행바 + Don't show for today / Close 고정 버튼)이 즉시 갱신 (C-07b, C-08)
+- **캐러셀** — 한 국가에 Live 캠페인이 여럿이면 우선순위 순서(수동 숫자 → Auto 최신순)로 자동 슬라이드 + 좌우 스와이프 + 순환 (D-01~D-04, §6)
+- **진짜 상태값** — Scheduled / Live / Ended / Deleted + Stop now(back-dating 없음) + 소프트 삭제/복구 (H-03~H-06)
+- **우선순위 검증** — 국가 내 1~N 정수·중복 불가, 수동 숫자는 Auto 복귀 후에만 삭제 (H-10, §4.3)
+- **규칙 기반 대상 + Preview audience** — 전체/세그먼트(그룹+국가 칩), "이후 가입자도 포함" 추정치 (C-04~C-06)
+- **정직한 복제** — 통계 0 · 일정 비움 · Scheduled로 시작 (C-02/03)
+- **테스트 발송 분리** — 지갑 검증(4자리+ 숫자면 성공 시뮬레이션), 별도 로그, 24h 자동만료 (T-01~T-04)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 조작 팁
 
-## Deploy on Vercel
+- 목록 상단 **📱 모바일 미리보기(캐러셀)** 버튼 → 국가 선택 후 캐러셀 확인 (Cambodia는 Live 3건)
+- **↺ 시드 초기화** → 목업과 동일한 샘플 데이터로 리셋
+- New Campaign에서 배너 이미지를 업로드하면 우측 폰에 실제 이미지가 렌더링됩니다.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+> 데이터는 브라우저 localStorage(`iam.campaigns.v1`, `iam.testsends.v1`)에 저장됩니다. 초기화하려면 시드 초기화 버튼 또는 브라우저 저장소를 비우세요.

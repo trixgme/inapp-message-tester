@@ -1,0 +1,171 @@
+import type { Campaign } from "./types";
+
+export const GROUPS = ["Western", "Asia Direct", "South Asia", "Southeast Asia"];
+
+export const COUNTRIES = [
+  "Nepal",
+  "Cambodia",
+  "China",
+  "Philippines",
+  "Vietnam",
+  "Indonesia",
+  "Thailand",
+  "Bangladesh",
+  "Sri Lanka",
+  "Myanmar",
+];
+
+/** 배너 탭 시 이동할 인앱 메뉴/기능 (기획서 C-07, [확인필요] 실제 딥링크 목록) */
+export const APP_MENUS = [
+  "Home",
+  "Send Money",
+  "GME Card",
+  "Rewards",
+  "Exchange Rates",
+  "Refer a Friend",
+  "Notifications",
+  "My Profile",
+];
+
+/** 배너 이미지 임시 spec (기획서 C-09, [확인필요]) */
+export const IMAGE_SPEC = "PNG · JPG | 1080 × 1350 px (4:5) | 500KB 이하";
+
+/** 대략적인 국가별 모수 (Preview audience 추정에 사용, 데모용) */
+export const COUNTRY_BASE: Record<string, number> = {
+  Nepal: 182000,
+  Cambodia: 46000,
+  China: 210000,
+  Philippines: 138000,
+  Vietnam: 71000,
+  Indonesia: 59000,
+  Thailand: 33000,
+  Bangladesh: 96000,
+  "Sri Lanka": 41000,
+  Myanmar: 27000,
+};
+
+const cs = (
+  status: Campaign["perCountry"][string]["status"],
+  priority: number | null,
+  sent: number,
+  views: number,
+  clicks: number
+) => ({ status, priority, sent, views, clicks });
+
+/** 목업(FigJam) 화면과 동일한 시드 데이터 */
+export const SEED_CAMPAIGNS: Campaign[] = [
+  {
+    id: "c-dashain",
+    name: "Nepal Dashain promo",
+    audienceType: "segment",
+    group: "South Asia",
+    countries: ["Nepal"],
+    poster: { from: "#7c2d12", to: "#b91c1c", title: "DASHAIN\nSPECIAL", subtitle: "축제 시즌 송금 혜택" },
+    tapType: "in_app_menu",
+    tapMenu: "Send Money",
+    startType: "scheduled",
+    startAt: "2026-10-01 09:00",
+    endAt: "2026-10-15 23:59",
+    createdBy: "SANDEEPT",
+    createdAt: "2026-06-29 10:00",
+    perCountry: { Nepal: cs("scheduled", null, 0, 0, 0) },
+  },
+  {
+    id: "c-corridor",
+    name: "Corridor cashback",
+    audienceType: "segment",
+    group: "Western",
+    countries: ["Cambodia", "Nepal"],
+    poster: { from: "#0f766e", to: "#0891b2", title: "CORRIDOR\nCASHBACK", subtitle: "수수료 캐시백 이벤트" },
+    tapType: "external_url",
+    tapUrl: "https://gme.example.com/cashback",
+    startType: "immediate",
+    startAt: "2026-06-29 08:00",
+    endAt: "2026-08-31 23:59",
+    createdBy: "ianovk",
+    createdAt: "2026-06-29 08:00",
+    perCountry: {
+      Cambodia: cs("live", null, 4200, 900, 88),
+      Nepal: cs("live", null, 3100, 640, 59),
+    },
+  },
+  {
+    id: "c-cny",
+    name: "Cambodia New Year",
+    audienceType: "segment",
+    group: "Southeast Asia",
+    countries: ["Cambodia"],
+    poster: { from: "#b45309", to: "#f59e0b", title: "KHMER\nNEW YEAR", subtitle: "쫄츠남 특별 프로모션" },
+    tapType: "in_app_menu",
+    tapMenu: "Rewards",
+    startType: "immediate",
+    startAt: "2026-06-01 00:00",
+    endAt: "2026-07-31 23:59",
+    createdBy: "mirat",
+    createdAt: "2026-06-28 14:30",
+    perCountry: { Cambodia: cs("live", null, 9800, 2100, 240) },
+  },
+  {
+    id: "c-china-card",
+    name: "China card promotion",
+    audienceType: "segment",
+    group: "Asia Direct",
+    countries: ["China"],
+    poster: { from: "#1e3a8a", to: "#2563eb", title: "GME CARD\n30% OFF", subtitle: "카드 발급 프로모션" },
+    tapType: "in_app_menu",
+    tapMenu: "GME Card",
+    startType: "immediate",
+    startAt: "2026-06-27 18:56",
+    endAt: "2026-09-30 23:59",
+    createdBy: "sinas",
+    createdAt: "2026-06-25 11:00",
+    perCountry: { China: cs("live", null, 103709, 88004, 8838) },
+  },
+  {
+    id: "c-nepal-welcome",
+    name: "Nepal welcome",
+    audienceType: "segment",
+    group: "South Asia",
+    countries: ["Nepal"],
+    poster: { from: "#4338ca", to: "#7c3aed", title: "WELCOME\nBONUS", subtitle: "첫 송금 웰컴 보너스" },
+    tapType: "in_app_menu",
+    tapMenu: "Send Money",
+    startType: "immediate",
+    startAt: "2026-06-27 18:16",
+    endAt: "2026-12-31 23:59",
+    createdBy: "SANDEEPT",
+    createdAt: "2026-06-22 16:00",
+    perCountry: { Nepal: cs("live", null, 72731, 62651, 5885) },
+  },
+  {
+    id: "c-cam-june27",
+    name: "Cambodia card June 27",
+    audienceType: "segment",
+    group: "Southeast Asia",
+    countries: ["Cambodia"],
+    poster: { from: "#1e293b", to: "#0ea5e9", title: "30%\nCASHBACK", subtitle: "GME CARD PROMO" },
+    tapType: "external_url",
+    tapUrl: "https://gme.example.com/kh-card",
+    startType: "immediate",
+    startAt: "2026-06-27 23:57",
+    endAt: "2026-12-31 23:59",
+    createdBy: "mirat",
+    createdAt: "2026-06-20 10:00",
+    perCountry: { Cambodia: cs("live", 1, 113828, 10054, 1047) },
+  },
+  {
+    id: "c-nepal-summer",
+    name: "NEPAL - Summer",
+    audienceType: "segment",
+    group: "South Asia",
+    countries: ["Nepal"],
+    poster: { from: "#0369a1", to: "#38bdf8", title: "SUMMER\nOFFER", subtitle: "여름 시즌 종료" },
+    tapType: "none",
+    startType: "immediate",
+    startAt: "2026-05-01 00:00",
+    endAt: "2026-06-30 12:00",
+    createdBy: "maksuda",
+    createdAt: "2026-04-28 09:00",
+    perCountry: { Nepal: cs("ended", null, 44019, 8201, 990) },
+  },
+];
