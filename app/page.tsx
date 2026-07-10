@@ -15,7 +15,6 @@ import {
   saveCampaigns,
   stopRow,
   toRows,
-  uid,
 } from "@/lib/store";
 import MobilePreview from "@/components/MobilePreview";
 import PageTabs from "@/components/PageTabs";
@@ -40,14 +39,6 @@ function sortValue(r: CampaignRow, key: SortKey): string | number {
     case "clicks": return r.clicks;
     case "ctr": return r.views ? r.clicks / r.views : -1; // 노출 없으면 최하위
   }
-}
-
-function fmtNow(): string {
-  const d = new Date();
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(
-    d.getMinutes()
-  )}`;
 }
 
 export default function HistoryPage() {
@@ -136,25 +127,6 @@ export default function HistoryPage() {
     setStatus("all");
   };
 
-  const duplicate = (c: Campaign) => {
-    const per: Campaign["perCountry"] = {};
-    for (const cc of c.countries)
-      per[cc] = { status: "scheduled", priority: null, sent: 0, views: 0, clicks: 0 };
-    const copy: Campaign = {
-      ...c,
-      id: uid("c"),
-      name: `${c.name} (copy)`,
-      createdBy: "trixh",
-      createdAt: fmtNow(),
-      startType: "scheduled",
-      startAt: undefined,
-      endAt: undefined,
-      perCountry: per,
-    };
-    persist([copy, ...list]);
-    setToast("복제됨 — 통계 0 · 일정 비움 · Scheduled (저장 전 변경+이름 필요, C-02/03)");
-  };
-
   const onStop = (c: Campaign, cc: string) => {
     persist(stopRow(list, c.id, cc));
     setToast(`Stop now — ${c.name} · ${cc} → Ended (back-dating 없음)`);
@@ -240,7 +212,6 @@ export default function HistoryPage() {
             ) : (
               <>
                 <button className="btn btn-outline btn-xs" onClick={() => setToast(`Modify — ${c.name} (프로토타입)`)}>Modify</button>
-                <button className="btn btn-outline btn-xs" onClick={() => duplicate(c)}>Duplicate</button>
                 {r.status === "live" ? (
                   <button className="btn btn-amber btn-xs" onClick={() => onStop(c, r.country)}>Stop now</button>
                 ) : (
