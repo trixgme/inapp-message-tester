@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { COUNTRIES, GROUPS } from "@/lib/data";
-import type { Campaign, Status } from "@/lib/types";
+import { COUNTRIES, COUNTRY_GROUP, GROUPS } from "@/lib/data";
+import type { Campaign, CampaignRow, Status } from "@/lib/types";
 import {
   STATUS_LABEL,
   carouselOrder,
@@ -22,6 +22,26 @@ import PageTabs from "@/components/PageTabs";
 
 const STATUS_OPTS: (Status | "all")[] = ["all", "scheduled", "live", "ended", "deleted"];
 
+/** 헤더 클릭 정렬 대상 컬럼 */
+type SortKey = "country" | "createdAt" | "status" | "start" | "end" | "sent" | "views" | "clicks" | "ctr";
+const STATUS_RANK: Record<Status, number> = { live: 0, scheduled: 1, ended: 2, deleted: 3 };
+/** 지표 컬럼은 첫 클릭에 내림차순(큰 값 먼저)이 자연스럽다 */
+const NUMERIC_KEYS: SortKey[] = ["sent", "views", "clicks", "ctr"];
+
+function sortValue(r: CampaignRow, key: SortKey): string | number {
+  switch (key) {
+    case "country": return r.country;
+    case "createdAt": return r.campaign.createdAt;
+    case "status": return STATUS_RANK[r.status];
+    case "start": return r.campaign.startAt ?? "";
+    case "end": return r.campaign.endAt ?? "";
+    case "sent": return r.sent;
+    case "views": return r.views;
+    case "clicks": return r.clicks;
+    case "ctr": return r.views ? r.clicks / r.views : -1; // 노출 없으면 최하위
+  }
+}
+
 function fmtNow(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
@@ -39,6 +59,7 @@ export default function HistoryPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [previewCountry, setPreviewCountry] = useState<string>("Cambodia");
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 } | null>(null);
 
   useEffect(() => setList(loadCampaigns()), []);
   useEffect(() => {
@@ -73,6 +94,36 @@ export default function HistoryPage() {
     });
     return c;
   }, [rows]);
+
+  /** 보드와 동일한 섹션 분할: 🌍 전체 국가 + corridor 그룹별 (빈 섹션은 숨김) */
+  const sections = useMemo(() => {
+    const allRows = rows.filter((r) => r.country === "All");
+    const groups = GROUPS.map((g) => ({
+      group: g,
+      rows: rows.filter((r) => COUNTRY_GROUP[r.country] === g),
+    })).filter((s) => s.rows.length > 0);
+    return { allRows, groups };
+  }, [rows]);
+
+  /** 헤더 클릭 정렬 — 모든 섹션 테이블에 공통 적용 (미지정 시 최신 생성순), 동률은 최신 생성순 */
+  const applySort = (arr: CampaignRow[]) => {
+    if (!sort) return arr;
+    const { key, dir } = sort;
+    return [...arr].sort((a, b) => {
+      const va = sortValue(a, key);
+      const vb = sortValue(b, key);
+      const d = typeof va === "number" && typeof vb === "number" ? va - vb : String(va).localeCompare(String(vb));
+      if (d) return d * dir;
+      return b.campaign.createdAt.localeCompare(a.campaign.createdAt);
+    });
+  };
+
+  const toggleSort = (key: SortKey) =>
+    setSort((s) =>
+      s?.key === key
+        ? { key, dir: s.dir === 1 ? -1 : 1 }
+        : { key, dir: NUMERIC_KEYS.includes(key) ? -1 : 1 }
+    );
 
   if (!list) {
     return <div className="p-10 text-sm text-gray-400">불러오는 중…</div>;
@@ -129,6 +180,99 @@ export default function HistoryPage() {
     tapMenu: c.tapMenu,
     tapUrl: c.tapUrl,
   }));
+
+  const head = (
+    <thead>
+      <tr>
+        <th>Priority</th>
+        <th>Campaign</th>
+        <SortTh k="country" sort={sort} onToggle={toggleSort}>Country</SortTh>
+        <th>Created by</th>
+        <SortTh k="createdAt" sort={sort} onToggle={toggleSort}>Created at</SortTh>
+        <SortTh k="status" sort={sort} onToggle={toggleSort}>Status</SortTh>
+        <SortTh k="start" sort={sort} onToggle={toggleSort}>Start</SortTh>
+        <SortTh k="end" sort={sort} onToggle={toggleSort}>End</SortTh>
+        <SortTh k="sent" sort={sort} onToggle={toggleSort} num>Sent</SortTh>
+        <SortTh k="views" sort={sort} onToggle={toggleSort} num>Views</SortTh>
+        <SortTh k="clicks" sort={sort} onToggle={toggleSort} num>Clicks</SortTh>
+        <SortTh k="ctr" sort={sort} onToggle={toggleSort} num>CTR</SortTh>
+        <th>Actions</th>
+      </tr>
+    </thead>
+  );
+
+  const renderRow = (r: CampaignRow) => {
+    const c = r.campaign;
+    const ctr = r.views ? ((r.clicks / r.views) * 100).toFixed(2) + "%" : "—";
+    return (
+      <tr key={c.id + r.country}>
+        <td>
+          {r.status === "live" ? (
+            <Link
+              href={`/priority?country=${encodeURIComponent(r.country)}`}
+              title={`${r.country} 노출 순서 관리에서 변경 (위에서부터 1..N 자동 부여)`}
+              className={
+                "inline-flex h-6 min-w-6 items-center justify-center rounded-md px-1.5 text-[12px] font-bold " +
+                (r.priority === 1 ? "bg-[#c8102e] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200")
+              }
+            >
+              {r.priority ?? "—"}
+            </Link>
+          ) : (
+            <span className="text-gray-400">—</span>
+          )}
+        </td>
+        <td className="font-semibold text-gray-800">{c.name}</td>
+        <td>{r.country}</td>
+        <td className="text-gray-600">{c.createdBy}</td>
+        <td className="text-gray-600">{c.createdAt}</td>
+        <td><StatusBadge s={r.status} /></td>
+        <td className="text-gray-600">{c.startType === "immediate" && r.status === "live" ? c.startAt : c.startAt ?? "—"}</td>
+        <td className="text-gray-600">{c.endAt ?? "—"}</td>
+        <td className="num">{r.sent ? r.sent.toLocaleString() : "—"}</td>
+        <td className="num">{r.views ? r.views.toLocaleString() : "—"}</td>
+        <td className="num">{r.clicks ? r.clicks.toLocaleString() : "—"}</td>
+        <td className="num">{ctr}</td>
+        <td>
+          <div className="flex gap-1">
+            {r.status === "deleted" ? (
+              <button className="btn btn-outline btn-xs" onClick={() => onRestore(c, r.country)}>Restore</button>
+            ) : (
+              <>
+                <button className="btn btn-outline btn-xs" onClick={() => setToast(`Modify — ${c.name} (프로토타입)`)}>Modify</button>
+                <button className="btn btn-outline btn-xs" onClick={() => duplicate(c)}>Duplicate</button>
+                {r.status === "live" ? (
+                  <button className="btn btn-amber btn-xs" onClick={() => onStop(c, r.country)}>Stop now</button>
+                ) : (
+                  <button className="btn btn-xs" style={{ background: "#dc2626", color: "#fff" }} onClick={() => onDelete(c, r.country)}>Delete</button>
+                )}
+              </>
+            )}
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
+  /** 보드와 같은 룩의 섹션: 제목 + 카운트 + 구분선, 그 아래 정렬 가능한 테이블 */
+  const renderSection = (title: string, sectionRows: CampaignRow[], key: string) => {
+    const live = sectionRows.filter((r) => r.status === "live").length;
+    return (
+      <section key={key} className="mt-5">
+        <div className="mb-2 flex items-center gap-2">
+          <h2 className="text-[13px] font-extrabold tracking-wide text-gray-700">{title}</h2>
+          <span className="text-[11px] text-gray-400">Live {live}건 · 총 {sectionRows.length}건</span>
+          <span className="h-px flex-1 bg-gray-200" />
+        </div>
+        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+          <table className="dtable">
+            {head}
+            <tbody>{applySort(sectionRows).map(renderRow)}</tbody>
+          </table>
+        </div>
+      </section>
+    );
+  };
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-4">
@@ -206,85 +350,18 @@ export default function HistoryPage() {
         <b className="text-green-700">{counts.live} live</b> · {counts.scheduled} scheduled · {counts.ended} ended
       </div>
 
-      {/* table */}
-      <div className="mt-2 overflow-x-auto rounded-lg border border-gray-200">
-        <table className="dtable">
-          <thead>
-            <tr>
-              <th>Priority</th><th>Campaign</th><th>Country</th><th>Created by</th><th>Created at</th>
-              <th>Status</th><th>Start</th><th>End</th>
-              <th className="num">Sent</th><th className="num">Views</th><th className="num">Clicks</th><th className="num">CTR</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr><td colSpan={13} className="py-8 text-center text-gray-400">조건에 맞는 캠페인이 없습니다.</td></tr>
-            )}
-            {rows.map((r) => {
-              const c = r.campaign;
-              const ctr = r.views ? ((r.clicks / r.views) * 100).toFixed(2) + "%" : "—";
-              return (
-                <tr key={c.id + r.country}>
-                  <td>
-                    {r.status === "live" ? (
-                      <Link
-                        href={`/priority?country=${encodeURIComponent(r.country)}`}
-                        title={`${r.country} 노출 순서 관리에서 변경 (위에서부터 1..N 자동 부여)`}
-                        className={
-                          "inline-flex h-6 min-w-6 items-center justify-center rounded-md px-1.5 text-[12px] font-bold " +
-                          (r.priority === 1 ? "bg-[#c8102e] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200")
-                        }
-                      >
-                        {r.priority ?? "—"}
-                      </Link>
-                    ) : (
-                      <span className="text-gray-400">—</span>
-                    )}
-                  </td>
-                  <td className="font-semibold text-gray-800">{c.name}</td>
-                  <td>{r.country}</td>
-                  <td className="text-gray-600">{c.createdBy}</td>
-                  <td className="text-gray-600">{c.createdAt}</td>
-                  <td><StatusBadge s={r.status} /></td>
-                  <td className="text-gray-600">{c.startType === "immediate" && r.status === "live" ? c.startAt : c.startAt ?? "—"}</td>
-                  <td className="text-gray-600">{c.endAt ?? "—"}</td>
-                  <td className="num">{r.sent ? r.sent.toLocaleString() : "—"}</td>
-                  <td className="num">{r.views ? r.views.toLocaleString() : "—"}</td>
-                  <td className="num">{r.clicks ? r.clicks.toLocaleString() : "—"}</td>
-                  <td className="num">{ctr}</td>
-                  <td>
-                    <div className="flex gap-1">
-                      {r.status === "deleted" ? (
-                        <button className="btn btn-outline btn-xs" onClick={() => onRestore(c, r.country)}>Restore</button>
-                      ) : (
-                        <>
-                          <button className="btn btn-outline btn-xs" onClick={() => setToast(`Modify — ${c.name} (프로토타입)`)}>Modify</button>
-                          <button className="btn btn-outline btn-xs" onClick={() => duplicate(c)}>Duplicate</button>
-                          {r.status === "live" ? (
-                            <button className="btn btn-amber btn-xs" onClick={() => onStop(c, r.country)}>Stop now</button>
-                          ) : (
-                            <button className="btn btn-xs" style={{ background: "#dc2626", color: "#fff" }} onClick={() => onDelete(c, r.country)}>Delete</button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <p className="mt-3 text-[11px] leading-relaxed text-gray-400">
-        Priority는 <b>위에서부터 1·2·3…이 자동 부여</b>되는 노출 순서입니다. 국가 행의 숫자는 해당 국가
-        캐러셀(전체 국가 배너 포함 통합 목록)에서의 실제 위치이고, All 행의 숫자는 전체 국가 배너들 간 상대
-        순서입니다 (국가별 실제 위치는 보드에서 확인). 순서 변경은{" "}
-        <Link href="/priority" className="text-gray-500 underline">노출 순서 관리</Link>에서 드래그앤드롭으로 하며,
-        새로 Live되는 캠페인은 맨 위(1번)로 진입합니다. 다국가 캠페인은 국가마다 한 행이며 Stop/Delete는 해당
-        행에만 적용되고, Stop 시 남은 순서가 자동으로 당겨집니다.
-      </p>
+      {/* 섹션별 테이블: 🌍 전체 국가 → corridor 그룹 (보드와 동일 구조) */}
+      {rows.length === 0 ? (
+        <div className="mt-3 rounded-lg border border-gray-200 bg-white py-10 text-center text-sm text-gray-400">
+          조건에 맞는 캠페인이 없습니다.
+        </div>
+      ) : (
+        <>
+          {sections.allRows.length > 0 &&
+            renderSection("🌍 전체 국가 (All Countries)", sections.allRows, "All")}
+          {sections.groups.map((s) => renderSection(s.group, s.rows, s.group))}
+        </>
+      )}
 
       {/* carousel preview overlay */}
       {previewOpen && (
@@ -320,6 +397,35 @@ export default function HistoryPage() {
         </div>
       )}
     </div>
+  );
+}
+
+/** 클릭 정렬 헤더: 첫 클릭 = 기본 방향(지표는 내림차순), 재클릭 = 반전 */
+function SortTh({
+  k,
+  sort,
+  onToggle,
+  num,
+  children,
+}: {
+  k: SortKey;
+  sort: { key: SortKey; dir: 1 | -1 } | null;
+  onToggle: (k: SortKey) => void;
+  num?: boolean;
+  children: React.ReactNode;
+}) {
+  const active = sort?.key === k;
+  return (
+    <th
+      className={(num ? "num " : "") + "cursor-pointer select-none hover:!bg-gray-200"}
+      title="클릭하여 정렬 (재클릭 시 반전)"
+      onClick={() => onToggle(k)}
+    >
+      {children}
+      <span className={"ml-0.5 text-[10px] " + (active ? "text-[#c8102e]" : "text-gray-400")}>
+        {active ? (sort!.dir === 1 ? "▲" : "▼") : "↕"}
+      </span>
+    </th>
   );
 }
 
