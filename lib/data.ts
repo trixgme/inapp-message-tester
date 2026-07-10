@@ -15,6 +15,20 @@ export const COUNTRIES = [
   "Myanmar",
 ];
 
+/** 노출 순서 보드의 그룹핑용 국가→corridor 매핑 ([확인필요] 실제 corridor 구성) */
+export const COUNTRY_GROUP: Record<string, string> = {
+  Nepal: "South Asia",
+  Bangladesh: "South Asia",
+  "Sri Lanka": "South Asia",
+  Cambodia: "Southeast Asia",
+  Philippines: "Southeast Asia",
+  Vietnam: "Southeast Asia",
+  Indonesia: "Southeast Asia",
+  Thailand: "Southeast Asia",
+  Myanmar: "Southeast Asia",
+  China: "Asia Direct",
+};
+
 /** 배너 탭 시 이동할 인앱 메뉴/기능 (기획서 C-07, [확인필요] 실제 딥링크 목록) */
 export const APP_MENUS = [
   "Home",
@@ -85,8 +99,8 @@ export const SEED_CAMPAIGNS: Campaign[] = [
     createdBy: "ianovk",
     createdAt: "2026-06-29 08:00",
     perCountry: {
-      Cambodia: cs("live", null, 4200, 900, 88),
-      Nepal: cs("live", null, 3100, 640, 59),
+      Cambodia: cs("live", 3, 4200, 900, 88),
+      Nepal: cs("live", 2, 3100, 640, 59),
     },
   },
   {
@@ -103,7 +117,7 @@ export const SEED_CAMPAIGNS: Campaign[] = [
     endAt: "2026-07-31 23:59",
     createdBy: "mirat",
     createdAt: "2026-06-28 14:30",
-    perCountry: { Cambodia: cs("live", null, 9800, 2100, 240) },
+    perCountry: { Cambodia: cs("live", 4, 9800, 2100, 240) },
   },
   {
     id: "c-china-card",
@@ -119,7 +133,7 @@ export const SEED_CAMPAIGNS: Campaign[] = [
     endAt: "2026-09-30 23:59",
     createdBy: "sinas",
     createdAt: "2026-06-25 11:00",
-    perCountry: { China: cs("live", null, 103709, 88004, 8838) },
+    perCountry: { China: cs("live", 2, 103709, 88004, 8838) },
   },
   {
     id: "c-nepal-welcome",
@@ -135,7 +149,7 @@ export const SEED_CAMPAIGNS: Campaign[] = [
     endAt: "2026-12-31 23:59",
     createdBy: "SANDEEPT",
     createdAt: "2026-06-22 16:00",
-    perCountry: { Nepal: cs("live", null, 72731, 62651, 5885) },
+    perCountry: { Nepal: cs("live", 3, 72731, 62651, 5885) },
   },
   {
     id: "c-cam-june27",
@@ -152,6 +166,35 @@ export const SEED_CAMPAIGNS: Campaign[] = [
     createdBy: "mirat",
     createdAt: "2026-06-20 10:00",
     perCountry: { Cambodia: cs("live", 1, 113828, 10054, 1047) },
+  },
+  {
+    id: "c-global-notice",
+    name: "Global — GME 2.0 update",
+    audienceType: "all",
+    countries: ["All"],
+    poster: { from: "#111827", to: "#4b5563", title: "GME 2.0\nUPDATE", subtitle: "새 버전 안내 · 전체 국가 노출" },
+    tapType: "in_app_menu",
+    tapMenu: "Home",
+    startType: "immediate",
+    startAt: "2026-06-26 09:00",
+    endAt: "2026-12-31 23:59",
+    createdBy: "ianovk",
+    createdAt: "2026-06-26 09:00",
+    // priority 1 = 전체 국가 배너들 간의 상대 순서 (All 섹션)
+    perCountry: { All: cs("live", 1, 812000, 402113, 12064) },
+    // 국가별 캐러셀 슬롯 — 데모: 캄보디아에서는 로컬 프로모 다음(2번), 나머지 국가는 1번
+    allPriority: {
+      Nepal: 1,
+      Cambodia: 2,
+      China: 1,
+      Philippines: 1,
+      Vietnam: 1,
+      Indonesia: 1,
+      Thailand: 1,
+      Bangladesh: 1,
+      "Sri Lanka": 1,
+      Myanmar: 1,
+    },
   },
   {
     id: "c-nepal-summer",

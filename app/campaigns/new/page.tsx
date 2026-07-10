@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { APP_MENUS, COUNTRIES, GROUPS, IMAGE_SPEC } from "@/lib/data";
 import type { AudienceType, Campaign, StartType, TapType } from "@/lib/types";
 import {
+  addCampaign,
   addTestSend,
   estimateAudience,
   loadCampaigns,
@@ -132,7 +133,8 @@ export default function NewCampaignPage() {
       createdAt: fmtNow(),
       perCountry: per,
     };
-    saveCampaigns([campaign, ...list]);
+    // Live 국가행은 해당 국가 노출 순서 맨 위(1번)로 진입, 기존 행은 자동으로 한 칸씩 밀림
+    saveCampaigns(addCampaign(list, campaign));
     router.push("/");
   }
 
@@ -144,7 +146,10 @@ export default function NewCampaignPage() {
     tapUrl,
   };
 
-  const displayOrder = "Auto — newest-first within each Country (목록에서 국가별 우선순위 지정)";
+  const displayOrder =
+    audienceType === "all"
+      ? "모든 국가 캐러셀 맨 위(1번) 진입 — 이후 '노출 순서 관리'에서 국가별 위치 조정"
+      : "해당 국가 캐러셀 맨 위(1번) 진입 — 이후 '노출 순서 관리'에서 드래그로 조정";
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-4">
@@ -205,7 +210,7 @@ export default function NewCampaignPage() {
                       </span>
                     ))}
                   </div>
-                  <div className="hint">Once live, 캠페인은 국가별 1행으로 목록에 표시되며 각자 우선순위를 가집니다.</div>
+                  <div className="hint">Once live, 캠페인은 국가별 1행으로 표시되며 국가마다 독립적인 노출 순서(1~N)를 가집니다.</div>
                 </div>
               </div>
             )}

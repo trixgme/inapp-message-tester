@@ -13,11 +13,9 @@ import {
   resetCampaigns,
   restoreRow,
   saveCampaigns,
-  setPriority,
   stopRow,
   toRows,
   uid,
-  validatePriority,
 } from "@/lib/store";
 import MobilePreview from "@/components/MobilePreview";
 import PageTabs from "@/components/PageTabs";
@@ -123,13 +121,6 @@ export default function HistoryPage() {
     setToast(`복구됨 — ${c.name} · ${cc} → Ended`);
   };
 
-  const onPriority = (c: Campaign, cc: string, val: number | null) => {
-    const err = validatePriority(list, c.id, cc, val);
-    if (err) return setToast("⚠ " + err);
-    persist(setPriority(list, c.id, cc, val));
-    setToast(`우선순위 변경 — ${cc} · ${c.name} → ${val ?? "Auto"}`);
-  };
-
   const previewItems = carouselOrder(list, previewCountry).map((c) => ({
     name: c.name,
     bannerImage: c.bannerImage,
@@ -199,6 +190,7 @@ export default function HistoryPage() {
       {/* action row */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <Link href="/campaigns/new" className="btn btn-red">+ New campaign</Link>
+        <Link href="/priority" className="btn btn-outline">🎯 노출 순서 관리</Link>
         <Link href="/test-sends" className="btn btn-outline">Test Sends log</Link>
         <button className="btn btn-outline" onClick={() => setPreviewOpen(true)}>📱 모바일 미리보기(캐러셀)</button>
         <button
@@ -231,24 +223,23 @@ export default function HistoryPage() {
             )}
             {rows.map((r) => {
               const c = r.campaign;
-              const n = liveCount(list, r.country);
               const ctr = r.views ? ((r.clicks / r.views) * 100).toFixed(2) + "%" : "—";
               return (
                 <tr key={c.id + r.country}>
                   <td>
                     {r.status === "live" ? (
-                      <select
-                        className="select !w-[74px] !px-1.5 !py-1 text-[12px]"
-                        value={r.priority ?? "auto"}
-                        onChange={(e) => onPriority(c, r.country, e.target.value === "auto" ? null : Number(e.target.value))}
+                      <Link
+                        href={`/priority?country=${encodeURIComponent(r.country)}`}
+                        title={`${r.country} 노출 순서 관리에서 변경 (위에서부터 1..N 자동 부여)`}
+                        className={
+                          "inline-flex h-6 min-w-6 items-center justify-center rounded-md px-1.5 text-[12px] font-bold " +
+                          (r.priority === 1 ? "bg-[#c8102e] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200")
+                        }
                       >
-                        <option value="auto">Auto</option>
-                        {Array.from({ length: n }, (_, i) => i + 1).map((v) => (
-                          <option key={v} value={v}>{v}</option>
-                        ))}
-                      </select>
+                        {r.priority ?? "—"}
+                      </Link>
                     ) : (
-                      <span className="text-gray-400">{r.priority ?? "—"}</span>
+                      <span className="text-gray-400">—</span>
                     )}
                   </td>
                   <td className="font-semibold text-gray-800">{c.name}</td>
@@ -287,8 +278,12 @@ export default function HistoryPage() {
       </div>
 
       <p className="mt-3 text-[11px] leading-relaxed text-gray-400">
-        국가별로 그룹화되어 각 국가 안에서 최신 생성 우선(newest-first) 정렬됩니다. Priority는 Live 행에만 적용되는 캐러셀 순서 override이며 비우면 Auto(최신순)입니다.
-        수동 숫자는 국가 내 중복 불가·1~N 범위여야 하며, 삭제하려면 먼저 Auto로 되돌려야 합니다. 다국가 캠페인은 국가마다 한 행이며 Stop/Delete는 해당 국가 행에만 적용됩니다.
+        Priority는 <b>위에서부터 1·2·3…이 자동 부여</b>되는 노출 순서입니다. 국가 행의 숫자는 해당 국가
+        캐러셀(전체 국가 배너 포함 통합 목록)에서의 실제 위치이고, All 행의 숫자는 전체 국가 배너들 간 상대
+        순서입니다 (국가별 실제 위치는 보드에서 확인). 순서 변경은{" "}
+        <Link href="/priority" className="text-gray-500 underline">노출 순서 관리</Link>에서 드래그앤드롭으로 하며,
+        새로 Live되는 캠페인은 맨 위(1번)로 진입합니다. 다국가 캠페인은 국가마다 한 행이며 Stop/Delete는 해당
+        행에만 적용되고, Stop 시 남은 순서가 자동으로 당겨집니다.
       </p>
 
       {/* carousel preview overlay */}
